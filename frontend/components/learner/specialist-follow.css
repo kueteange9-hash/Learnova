@@ -1,0 +1,24 @@
+.specialistFollow { margin-top:16px; }
+.specialistProfileActions { display:flex; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-top:16px; }
+.specialistProfileActions .specialistFollow { margin-top:0; }
+.specialistProfileActions .learnerPrimary { min-height:42px; }
+.specialistProfileActions .learnerPrimary:disabled { opacity:.6; cursor:not-allowed; }
+.bookingSection { overflow:hidden; animation:bookingReveal .24s ease-out; }
+.bookingSection h2 { color:#241b52; letter-spacing:-.2px; }
+.bookingSection form > div { padding:14px; border:1px solid #eeeaf8; border-radius:12px; background:#fcfbff; }
+.bookingSection input,.bookingSection textarea { background:#fff; border-color:#ddd8ee!important; transition:border-color .18s ease, box-shadow .18s ease; }
+.bookingSection input:focus,.bookingSection textarea:focus { border-color:#866cf2!important; box-shadow:0 0 0 3px #866cf21c!important; outline:0; }
+.bookingForm > div:last-child { display:flex; justify-content:flex-end; }
+.bookingForm > div:last-child button { min-width:190px; }
+.bookingSuccess { animation:bookingReveal .24s ease-out; }
+@keyframes bookingReveal { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+.specialistFollowButton { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:10px 16px; border:1px solid #d8d3ee; border-radius:8px; background:#fff; color:var(--learner-purple,#6d4aff); font-size:13px; font-weight:600; cursor:pointer; }
+.specialistFollowButton:hover:not(:disabled) { background:#f5f2ff; }
+.specialistFollowButton.isFollowing { background:#f0edff; border-color:#d8d0f7; }
+.specialistFollowButton:disabled { opacity:.6; cursor:wait; }
+.specialistFollowButton:focus-visible,.specialistFollowError button:focus-visible { outline:3px solid #b5a5fa; outline-offset:3px; }
+.specialistFollow .specialistFollowHint { margin:6px 0 0; color:#697386; font-size:12px; }
+.specialistFollowError { margin-top:8px; color:#a13730; font-size:13px; }
+.specialistFollowError p { color:inherit; }
+.specialistFollowError button { margin-top:5px; padding:4px 0; background:none; border:0; color:inherit; text-decoration:underline; cursor:pointer; }
+.specialistFollowAnnouncement { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }

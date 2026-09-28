@@ -1,0 +1,38 @@
+.specialistComposer { display: block; }
+.composeIntro { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
+.composeIntro > span { width: 36px; height: 36px; border-radius: 10px; background: #ede9ff; color: #7c3aed; display: grid; place-items: center; }
+.composeIntro h2 { font-size: 1.05rem; }
+.composeIntro p { font-size: 0.9rem; color: #8a919d; }
+.specialistComposer textarea { width: 100%; height: 95px; min-height: 95px; font-size: 0.98rem; }
+.composerTools { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.composerTools select { height: 35px; padding: 0 9px; border: 1px solid #e1e4ea; border-radius: 8px; background: #fff; font-size: 0.92rem; }
+.imagePicker { height: 35px; max-width: 210px; padding: 0 10px; margin: 0 !important; border: 1px dashed #cfd5df; border-radius: 8px; display: flex; align-items: center; gap: 6px; color: #697280; font-size: 0.92rem !important; cursor: pointer; }
+.imagePicker span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imagePicker input { display: none; }
+.uploadHint { display: block; margin-top: 7px; color: #9a9faa; font-size: 0.8rem; }
+.communityAuthorLink { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.communityAuthorLink:hover h3, .viewSpecialistLink:hover { color: var(--learner-purple); }
+.feedPost { font-size: 1rem; }
+.feedPost header time { margin-left: auto; color: #9298a3; font-size: 0.8rem; }
+.feedPostText { font-size: 1rem; line-height: 1.7; }
+.communityPostImage { display: block; width: 100%; max-height: 460px; object-fit: cover; border-radius: 12px; margin: 4px 0 14px; background: #f1f2f5; }
+.viewSpecialistLink { width: max-content; margin-top: 4px; display: flex; align-items: center; gap: 5px; color: #7c3aed; font-size: 0.9rem; font-weight: 750; }
+.postActionBtn { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 0.75rem; border-radius: 999px; font-size: 0.92rem; font-weight: 600; background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; transition: all 0.2s ease; }
+.postActionBtn:hover { background: #f5f3ff; border-color: #ddd6fe; color: #7c3aed; }
+.postActionBtn.liked { background: #fff1f2; border-color: #fecdd3; color: #e11d48; }
+.postCommentsThread { font-size: 0.95rem; }
+.postCommentsThread input { font-size: 0.92rem; }
+.topicItem { width: 100%; display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid #eff0f3; }
+.topicItem > span { font-size: 0.85rem; color: #a0a5af; }
+.topicItem > div { flex: 1; }
+.topicItem b, .topicItem small { display: block; }
+.topicItem b { font-size: 0.92rem; }
+.topicItem small { font-size: 0.78rem; color: #9a9faa; }
+
+@media (max-width: 600px) {
+  .specialistComposer .composeActions, .composerTools { align-items: stretch; flex-direction: column; }
+  .composerTools select, .imagePicker { width: 100%; max-width: none; }
+  .specialistComposer .learnerPrimary { width: 100%; }
+  .feedPost header { align-items: flex-start; }
+  .feedPost header time { max-width: 80px; text-align: right; }
+}

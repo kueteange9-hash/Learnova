@@ -1,0 +1,278 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                       String         @id @default(cuid())
+  name                     String
+  email                    String         @unique
+  password                 String
+  role                     UserRole
+  image                    String?
+  bio                      String?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  appointmentsAsLearner    Appointment[]  @relation("LearnerAppointments")
+  appointmentsAsSpecialist Appointment[]  @relation("SpecialistAppointments")
+  comments                 Comment[]
+  likes                    Like[]
+  notifications            Notification[]
+  payments                 Payment[]
+  posts                    Post[]
+  specialist               Specialist?
+  learnerProfile           LearnerProfile?
+  workshops                Workshop[]
+  workshopRegistrations    WorkshopRegistration[]
+  sentMessages             Message[] @relation("SentMessages")
+  receivedMessages         Message[] @relation("ReceivedMessages")
+  following                SpecialistFollow[] @relation("LearnerFollowing")
+  followers                SpecialistFollow[] @relation("SpecialistFollowers")
+  supportFeedbacks         SupportFeedback[]
+}
+
+model LearnerProfile {
+  userId      String   @id
+  interests   String[] @default([])
+  goals       String[] @default([])
+  formats     String[] @default([])
+  stage       String   @default("")
+  aspiration  String   @default("")
+  completedAt DateTime?
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SpecialistFollow {
+  learnerId    String
+  specialistId String
+  createdAt    DateTime @default(now())
+  learner      User @relation("LearnerFollowing", fields: [learnerId], references: [id], onDelete: Cascade)
+  specialist   User @relation("SpecialistFollowers", fields: [specialistId], references: [id], onDelete: Cascade)
+
+  @@id([learnerId, specialistId])
+  @@index([specialistId])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  recipientId String
+  text        String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  sender      User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, recipientId, createdAt])
+  @@index([recipientId, read])
+}
+
+model Specialist {
+  id               String             @id @default(cuid())
+  userId           String             @unique
+  domain           String
+  headline         String?
+  qualification    String?
+  experience       String?
+  howIHelp         String?
+  expertise        String[]           @default([])
+  expertiseDescriptions String[]      @default([])
+  languages        String[]           @default([])
+  sessionFormats   String[]           @default([])
+  sessionRate      Float?
+  sessionDuration  Int                @default(45)
+  verification     SpecialistStatus   @default(PENDING)
+  verificationDocument String?
+  verificationDocumentName String?
+  verificationDocumentType String?
+  verificationSubmittedAt DateTime?
+  verificationNotes String?
+  verifiedAt       DateTime?
+  approvalDismissed Boolean          @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  availability     AvailabilitySlot[]
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AvailabilitySlot {
+  id           String       @id @default(cuid())
+  specialistId String
+  startsAt     DateTime
+  endsAt       DateTime
+  booked       Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  specialist   Specialist   @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  appointment  Appointment?
+
+  @@unique([specialistId, startsAt])
+  @@index([specialistId, startsAt])
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  authorId  String
+  domain    String
+  text      String
+  image     String?
+  shares    Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  comments  Comment[]
+  likes     Like[]
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  authorId  String
+  postId    String
+  createdAt DateTime @default(now())
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Workshop {
+  id           String       @id @default(cuid())
+  specialistId String
+  title        String
+  description  String
+  image        String?
+  type         WorkshopType @default(FREE)
+  price        Float?
+  date         DateTime
+  meetingUrl   String?
+  createdAt    DateTime     @default(now())
+  specialist   User         @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  registrations WorkshopRegistration[]
+}
+
+model WorkshopRegistration {
+  id            String    @id @default(cuid())
+  workshopId    String
+  learnerId     String
+  paymentMethod String?
+  paymentStatus PaymentStatus @default(COMPLETED)
+  status        String    @default("REGISTERED")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  workshop      Workshop  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  learner       User      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([workshopId, learnerId])
+  @@index([learnerId, createdAt])
+  @@index([workshopId, status])
+}
+
+model Appointment {
+  id                 String            @id @default(cuid())
+  learnerId          String
+  specialistId       String
+  availabilitySlotId String?           @unique
+  date               DateTime
+  endDate             DateTime?
+  format              String           @default("Video")
+  status              AppointmentStatus @default(PENDING)
+  notes               String?
+  specialistNotes     String?
+  meetingUrl          String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  learner             User              @relation("LearnerAppointments", fields: [learnerId], references: [id], onDelete: Cascade)
+  specialist          User              @relation("SpecialistAppointments", fields: [specialistId], references: [id], onDelete: Cascade)
+  availabilitySlot    AvailabilitySlot? @relation(fields: [availabilitySlotId], references: [id], onDelete: SetNull)
+
+  @@index([learnerId, date])
+  @@index([specialistId, date])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  userId      String
+  amount      Float
+  status      PaymentStatus @default(PENDING)
+  reference   String?       @unique
+  description String?
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Domain {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum UserRole {
+  LEARNER
+  SPECIALIST
+  ADMIN
+}
+
+enum SpecialistStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum WorkshopType {
+  FREE
+  PAID
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model SupportFeedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  name      String
+  email     String
+  subject   String
+  message   String
+  category  String   @default("General")
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+

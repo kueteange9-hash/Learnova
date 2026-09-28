@@ -1,0 +1,25 @@
+.appointmentManager { display: grid; gap: 18px; }
+.appointmentTimezone { color: #747c8c; font-size: 12px; }
+.appointmentTabs { overflow-x: auto; margin: 0; }
+.appointmentTabs button { white-space: nowrap; }
+.appointmentCards { display: grid; gap: 16px; }
+.sessionCard { padding: 24px; }
+.sessionHeading { display: flex; gap: 14px; align-items: center; }
+.sessionHeading > div:nth-child(2) { flex: 1; }
+.sessionHeading h2 { font-size: 17px; margin: 0 0 5px; }
+.sessionHeading p { font-size: 12px; color: #727b8b; margin: 3px 0; }
+.sessionHeading .appointmentStatus { text-transform: capitalize; font-size: 11px; }
+.sessionDetails { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 20px 0; padding: 18px; border-radius: 12px; background: #f7f8fc; }
+.sessionDetails h3, .sessionEditor h3 { font-size: 13px; margin-bottom: 7px; }
+.sessionDetails p, .sessionEditor p, .sessionConfirmation p { font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; color: #626c7c; }
+.sessionUrl { color: #7c3aed !important; }
+.sessionActions { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+.sessionActions .outlineAction, .sessionActions .learnerPrimary { font-size: 12px; min-height: 38px; }
+.sessionEditor, .sessionConfirmation { margin-top: 20px; border-top: 1px solid #e4e7ef; padding-top: 20px; display: grid; gap: 14px; }
+.sessionEditor label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; }
+.sessionEditor input, .sessionEditor textarea { width: 100%; padding: 12px; border: 1px solid #dce1eb; border-radius: 8px; font: inherit; background: #fff; color: #25324b; }
+.sessionEditor small { color: #747c8c; font-size: 11px; font-weight: 400; }
+.appointmentManager button:disabled { opacity: .55; cursor: not-allowed; }
+.appointmentManager :focus-visible { outline: 2px solid #7c3aed; outline-offset: 3px; }
+.slotPicker input { display: inline-block !important; width: auto; margin-right: 6px; }
+@media (max-width: 600px) { .sessionCard { padding: 17px; } .sessionDetails { grid-template-columns: 1fr; gap: 16px; } .sessionHeading { flex-wrap: wrap; } .sessionActions > * { flex: 1 1 auto; justify-content: center; } }

@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                       String         @id @default(cuid())
+  name                     String
+  email                    String         @unique
+  password                 String
+  role                     UserRole
+  image                    String?
+  bio                      String?
+  // Learnova AI guidance chat: non-sensitive onboarding information.
+  // Used only as personalisation context for the learner's own guidance.
+  onboardingCompleted      Boolean        @default(false)
+  onboardingDomains        String[]       @default([])
+  onboardingInterests      String[]       @default([])
+  onboardingGoal           String?
+  onboardingGuidance       String?
+  onboardingCareer         String?
+  onboardingEducation      String?
+  onboardingCompletedAt    DateTime?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  appointmentsAsLearner    Appointment[]  @relation("LearnerAppointments")
+  appointmentsAsSpecialist Appointment[]  @relation("SpecialistAppointments")
+  comments                 Comment[]
+  likes                    Like[]
+  notifications            Notification[]
+  payments                 Payment[]
+  posts                    Post[]
+  specialist               Specialist?
+  workshops                Workshop[]
+}
+
+model Specialist {
+  id            String           @id @default(cuid())
+  userId        String           @unique
+  domain        String
+  qualification String?
+  experience    String?
+  verification  SpecialistStatus @default(PENDING)
+  verifiedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  authorId  String
+  domain    String
+  text      String
+  image     String?
+  shares    Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  comments  Comment[]
+  likes     Like[]
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  authorId  String
+  postId    String
+  createdAt DateTime @default(now())
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Workshop {
+  id           String       @id @default(cuid())
+  specialistId String
+  title        String
+  description  String
+  image        String?
+  type         WorkshopType @default(FREE)
+  price        Float?
+  date         DateTime
+  createdAt    DateTime     @default(now())
+  specialist   User         @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  learnerId    String
+  specialistId String
+  date         DateTime
+  status       AppointmentStatus @default(PENDING)
+  notes        String?
+  createdAt    DateTime          @default(now())
+  learner      User              @relation("LearnerAppointments", fields: [learnerId], references: [id], onDelete: Cascade)
+  specialist   User              @relation("SpecialistAppointments", fields: [specialistId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  userId      String
+  amount      Float
+  status      PaymentStatus @default(PENDING)
+  reference   String?       @unique
+  description String?
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  LEARNER
+  SPECIALIST
+  ADMIN
+}
+
+enum SpecialistStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum WorkshopType {
+  FREE
+  PAID
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
