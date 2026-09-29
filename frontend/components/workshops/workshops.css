@@ -171,3 +171,8 @@
 	.ws-form-footer { flex-direction: column-reverse; }
 	.ws-form-footer button { width: 100%; }
 }
+
+.ws-payment-wait { display:flex; align-items:center; gap:12px; padding:16px; color:#5541ba; }
+.ws-spinner { display:inline-block; width:22px; height:22px; flex-shrink:0; vertical-align:middle; border:3px solid #ded8ff; border-top-color:#6549db; border-radius:50%; animation:ws-spin 0.9s linear infinite; }
+@keyframes ws-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .ws-spinner { animation:none; } }

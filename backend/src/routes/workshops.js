@@ -165,7 +165,7 @@ router.get("/mine", requireAuth, requireRole("SPECIALIST"), async (req, res) => 
 router.get("/registered", requireAuth, requireRole("LEARNER"), async (req, res) => {
   try {
     const registrations = await prisma.workshopRegistration.findMany({
-      where: { learnerId: req.auth.userId },
+      where: { learnerId: req.auth.userId, paymentStatus: "COMPLETED", status: "REGISTERED" },
       include: {
         workshop: {
           include: {
@@ -219,7 +219,7 @@ router.get("/", async (req, res) => {
 
     res.json({
       success: true,
-      workshops,
+      workshops: workshops.map(workshop => ({ ...workshop, meetingUrl: null })),
     });
   } catch (error) {
     console.error("GET WORKSHOPS ERROR:", error);
@@ -245,41 +245,73 @@ router.post("/:id/register", requireAuth, requireRole("LEARNER"), async (req, re
     });
 
     if (existingRegistration) {
-      return res.json({ success: true, message: "You are already registered for this workshop", registration: existingRegistration });
-    }
-
-    if (workshop.type === "PAID") {
-      if (!phone || !/^\d+$/.test(phone)) {
-        return res.status(400).json({ success: false, message: "A valid mobile money phone number is required." });
+      if (existingRegistration.paymentStatus === "COMPLETED" && existingRegistration.status === "REGISTERED") {
+        return res.json({ success: true, registration: existingRegistration });
       }
-      try {
-        const { requestCollection } = require("../lib/campay");
-        const reference = `ws_${workshop.id}_${req.auth.userId}_${Date.now()}`;
-        await requestCollection(workshop.price, "XAF", phone, `Registration for ${workshop.title}`, reference);
-      } catch (err) {
-        return res.status(400).json({ success: false, message: err.message || "Payment initiation failed." });
-      }
+      // Never initiate another charge while an earlier attempt may still settle.
+      return res.status(202).json({ success: true, registration: existingRegistration });
     }
     if (new Date(workshop.date).getTime() <= Date.now()) {
       return res.status(400).json({ success: false, message: "Registration for this workshop has closed." });
     }
-
-    const registration = await prisma.workshopRegistration.upsert({
-      where: { workshopId_learnerId: { workshopId: workshop.id, learnerId: req.auth.userId } },
-      update: {},
-      create: {
-        workshopId: workshop.id,
-        learnerId: req.auth.userId,
-        paymentMethod: workshop.type === "PAID" ? String(paymentMethod || "MOMO").toUpperCase() : "FREE",
-        paymentStatus: workshop.type === "PAID" ? "PENDING" : "COMPLETED",
-        status: "REGISTERED",
+    const paid = workshop.type === "PAID";
+    if (paid && (!phone || !/^(237)?6\d{8}$/.test(phone) || !["MOMO", "OM"].includes(paymentMethod))) {
+      return res.status(400).json({ success: false, message: "Select a provider and enter a valid Cameroon mobile money number." });
+    }
+    // Claim the unique learner/workshop pair before contacting the provider.
+    let registration = await prisma.workshopRegistration.create({
+      data: {
+        workshopId: workshop.id, learnerId: req.auth.userId,
+        paymentMethod: paid ? paymentMethod : "FREE",
+        paymentAmount: paid ? workshop.price : null,
+        paymentStatus: paid ? "PENDING" : "COMPLETED",
+        status: paid ? "PENDING" : "REGISTERED",
       },
     });
-
-    return res.status(201).json({ success: true, message: "Workshop registration successful", registration });
+    if (paid) {
+      try {
+        const { requestCollection } = require("../lib/campay");
+        const collection = await requestCollection(workshop.price, "XAF", phone, `Registration for ${workshop.title}`, registration.id);
+        if (!collection.reference) throw new Error("Payment reference missing. Contact support before trying another payment.");
+        registration = await prisma.workshopRegistration.update({
+          where: { id: registration.id }, data: { paymentReference: collection.reference },
+        });
+      } catch (error) {
+        // An interrupted response can still mean the charge was initiated. Keep the claim.
+        return res.status(202).json({ success: true, registration, message: "Payment could not be verified. Contact support before trying another payment." });
+      }
+    }
+    return res.status(paid ? 202 : 201).json({ success: true, registration });
   } catch (error) {
     console.error("REGISTER WORKSHOP ERRROR:", error);
     return res.status(500).json({ success: false, message: "Failed to register for workshop" });
+  }
+});
+
+router.get("/:id/payment", requireAuth, requireRole("LEARNER"), async (req, res) => {
+  try {
+    let registration = await prisma.workshopRegistration.findUnique({
+      where: { workshopId_learnerId: { workshopId: req.params.id, learnerId: req.auth.userId } },
+    });
+    if (!registration) return res.status(404).json({ success: false, message: "Registration not found" });
+    if (registration.paymentStatus === "PENDING") {
+      if (!registration.paymentReference) {
+        return res.status(409).json({ success: false, message: "This payment needs support verification. Please contact support before paying again." });
+      }
+      const { getTransaction } = require("../lib/campay");
+      const transaction = await getTransaction(registration.paymentReference);
+      if (transaction.status === "SUCCESSFUL") {
+        if (transaction.reference !== registration.paymentReference || transaction.currency !== "XAF" || Number(transaction.amount) !== registration.paymentAmount) {
+          return res.status(409).json({ success: false, message: "Payment details could not be verified. Contact support." });
+        }
+        registration = await prisma.workshopRegistration.update({ where: { id: registration.id }, data: { paymentStatus: "COMPLETED", status: "REGISTERED" } });
+      } else if (transaction.status === "FAILED") {
+        registration = await prisma.workshopRegistration.update({ where: { id: registration.id }, data: { paymentStatus: "FAILED", status: "FAILED" } });
+      }
+    }
+    return res.json({ success: true, registration });
+  } catch (error) {
+    return res.status(502).json({ success: false, message: "Unable to verify payment. Please check again shortly." });
   }
 });
 

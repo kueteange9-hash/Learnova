@@ -70,7 +70,17 @@ async function requestCollection(amount, currency = "XAF", phone, description, r
   return await res.json();
 }
 
+async function getTransaction(reference) {
+  const token = await getCampayToken();
+  const res = await fetch(`${CAMPAY_API}/transaction/${encodeURIComponent(reference)}/`, {
+    headers: { Authorization: `Token ${token}` },
+  });
+  if (!res.ok) throw new Error("Unable to verify payment. Please check again shortly.");
+  return res.json();
+}
+
 module.exports = {
+  getTransaction,
   getCampayToken,
   requestCollection
 };

@@ -3,23 +3,24 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
-function setup(overrides = {}) {
+function setup(overrides = {}, payment = {}) {
   const routes = {};
   const workshop = { id: 'w1', specialistId: 'host', title: 'Workshop', description: 'Description', type: 'PAID', price: 5000, date: new Date(Date.now() + 86400000), meetingUrl: null };
   let updated;
   let registered = false;
+  let saved;
   const prisma = {
     workshop: { findUnique: async () => ({ ...workshop, ...overrides }), update: async data => { updated = data.data; return { ...workshop, ...data.data }; } },
-    workshopRegistration: { findUnique: async () => null, upsert: async () => { registered = true; return { id: 'registration' }; } },
+    workshopRegistration: { findUnique: async () => payment.existing || null, create: async ({ data }) => { registered = true; saved = { id: "registration", ...data }; return saved; }, update: async ({ data }) => ({ ...(saved || payment.existing), ...data }) },
   };
   const router = Object.fromEntries(['get', 'post', 'patch', 'delete'].map(method => [method, (url, ...handlers) => { routes[`${method} ${url}`] = handlers.at(-1); }]));
   const multer = Object.assign(() => ({ single: () => () => {} }), { diskStorage: () => ({}) });
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/routes/workshops.js'), 'utf8'), { require: name => name === 'express' ? { Router: () => router } : name === 'multer' ? multer : name === 'path' ? path : name.includes('prisma') ? prisma : { requireAuth() {}, requireRole: () => () => {} }, __dirname, module: {}, console });
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/routes/workshops.js'), 'utf8'), { require: name => name === 'express' ? { Router: () => router } : name === 'multer' ? multer : name === 'path' ? path : name.includes('prisma') ? prisma : name.includes('campay') ? { requestCollection: async () => ({ reference: 'ref' }), getTransaction: async () => payment.transaction } : { requireAuth() {}, requireRole: () => () => {} }, __dirname, module: {}, console });
   return { async call(route, body = {}, file) { const response = { code: 200, status(code) { this.code = code; return this; }, json(data) { this.data = data; return this; } }; await routes[route]({ params: { id: 'w1' }, auth: { userId: 'host' }, body, file }, response); return response; }, get updated() { return updated; }, get registered() { return registered; } };
 }
 test('paid registration cannot record a payment or grant a place without a provider', async () => {
   const app = setup(); const result = await app.call('post /:id/register', { paymentMethod: 'MOMO' });
-  assert.equal(result.code, 503); assert.equal(app.registered, false);
+  assert.equal(result.code, 400); assert.equal(app.registered, false);
 });
 test('free registration reserves a place', async () => {
   const app = setup({ type: 'FREE' }); const result = await app.call('post /:id/register');
@@ -74,4 +75,31 @@ test('a specialist cannot edit another host workshop', async () => {
   const app = setup({ specialistId: 'someone-else' });
   assert.equal((await app.call('patch /:id', { title: 'Changed' })).code, 404);
   assert.equal(app.updated, undefined);
+});
+
+test('initiating a paid collection does not confirm registration', async () => {
+  const app = setup();
+  const result = await app.call('post /:id/register', { paymentMethod: 'MOMO', phone: '670000000' });
+  assert.equal(result.code, 202);
+  assert.equal(result.data.registration.paymentStatus, 'PENDING');
+  assert.equal(result.data.registration.status, 'PENDING');
+  assert.equal(result.data.registration.paymentReference, 'ref');
+});
+for (const status of ['PENDING', 'FAILED', 'SUCCESSFUL']) {
+  test(`provider ${status} determines admission`, async () => {
+    const app = setup({}, { existing: { id: 'r', paymentReference: 'ref', paymentAmount: 5000, paymentStatus: 'PENDING', status: 'PENDING' }, transaction: { reference: 'ref', amount: 5000, currency: 'XAF', status } });
+    const result = await app.call('get /:id/payment');
+    assert.equal(result.data.registration.paymentStatus, status === 'SUCCESSFUL' ? 'COMPLETED' : status);
+    assert.equal(result.data.registration.status, status === 'SUCCESSFUL' ? 'REGISTERED' : status);
+  });
+}
+test('wrong payment amount cannot grant admission', async () => {
+  const app = setup({}, { existing: { paymentReference: 'ref', paymentAmount: 5000, paymentStatus: 'PENDING' }, transaction: { reference: 'ref', amount: 1, currency: 'XAF', status: 'SUCCESSFUL' } });
+  assert.equal((await app.call('get /:id/payment')).code, 409);
+});
+test('legacy pending registrations require verification without a second charge', async () => {
+  const app = setup({}, { existing: { paymentStatus: 'PENDING', status: 'REGISTERED' } });
+  assert.equal((await app.call('post /:id/register')).code, 202);
+  assert.equal(app.registered, false);
+  assert.equal((await app.call('get /:id/payment')).code, 409);
 });

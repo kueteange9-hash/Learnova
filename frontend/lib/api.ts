@@ -152,6 +152,10 @@ export type DomainItem = {
   updatedAt?: string;
 };
 
+export class ApiError extends Error {
+  constructor(message: string, public status: number) { super(message); this.name = "ApiError"; }
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -176,10 +180,10 @@ export async function apiRequest<T>(
   const data = await res.json().catch(() => null);
 
   if (!res.ok) {
-    throw new Error(
+    throw new ApiError(
       data?.message ||
       data?.error ||
-      (res.status >= 500 ? "Learnova is temporarily unavailable. Please try again shortly." : `Request failed with status ${res.status}`)
+      (res.status >= 500 ? "Learnova is temporarily unavailable. Please try again shortly." : `Request failed with status ${res.status}`), res.status
     );
   }
 
@@ -298,6 +302,7 @@ export const api = {
   getMyRegisteredWorkshops: () =>
     apiRequest<{ success: boolean; workshops: WorkshopRecord[] }> ("/workshops/registered"),
 
+  checkWorkshopPayment: (id: string, signal?: AbortSignal) => apiRequest<{ success: boolean; registration: { paymentStatus: string; status: string } }>(`/workshops/${id}/payment`, { signal, cache: "no-store" }),
   registerForWorkshop: (id: string, paymentMethod: "MOMO" | "OM" = "MOMO", phone?: string) =>
     apiRequest<{ success: boolean; message: string; registration: { id: string; workshopId: string; learnerId: string; paymentMethod: string | null; paymentStatus: string; status: string; createdAt: string } }>(`/workshops/${id}/register`, { method: "POST", body: JSON.stringify({ paymentMethod, phone }) }),
 

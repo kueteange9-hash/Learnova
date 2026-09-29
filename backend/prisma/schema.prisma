@@ -168,6 +168,8 @@ model WorkshopRegistration {
   workshopId    String
   learnerId     String
   paymentMethod String?
+  paymentReference String? @unique
+  paymentAmount Float?
   paymentStatus PaymentStatus @default(COMPLETED)
   status        String    @default("REGISTERED")
   createdAt     DateTime  @default(now())
